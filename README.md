@@ -23,20 +23,20 @@ I created this image because I needed to compile `cvs` to run on Alpine.  Here i
 
 ```bash
 # build the build-image
-mkdir ~/src/alpine-build
-cd ~/src/alpine-build
+mkdir ~/src/alpine-cbuilder
+cd ~/src/alpine-cbuilder
 gvim Dockerfile
-docker build -t alpine-build .
+docker build -t alpine-cbuilder .
 # get the source code for cvs
 mkdir ~/src/alpine-cvs
 cd ~/src/alpine-cvs
 wget https://ftp.gnu.org/non-gnu/cvs/source/stable/1.11.23/cvs-1.11.23.tar.gz
 tar xvzf cvs-1.11.23.tar.gz
 # enter the build system
-docker run --rm -ti -v `pwd`/cvs-1.11.23:/src alpine-build bash
+docker run --rm -ti -v `pwd`/cvs-1.11.23:/src alpine-cbuilder bash
 ```
 
-Within the `alpine-build` container:
+Within the `alpine-cbuilder` container:
 
 ```bash
 cd src
