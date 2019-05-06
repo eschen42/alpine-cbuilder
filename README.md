@@ -1,5 +1,5 @@
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.2656635.svg)](https://doi.org/10.5281/zenodo.2656635)
-[![Docker Repository](https://hub.docker.com/r/eschen42/alpine-cbuilder/builds "Docker Repository")](https://hub.docker.com/r/eschen42/alpine-cbuilder)
+[Docker Repository](https://hub.docker.com/r/eschen42/alpine-cbuilder)
 
 # A build environment for musl to target Alpine Linux
 
