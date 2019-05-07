@@ -20,7 +20,17 @@ This Docker image implements the advice at [https://wiki.alpinelinux.org/wiki/Ho
 
 Evidently, statically linking libaries against `glibc` does not result in complete static linking: see [https://github.com/rust-lang/cargo/issues/2968#issuecomment-238196762](https://github.com/rust-lang/cargo/issues/2968#issuecomment-238196762) and it runs up against licensing issues [https://lwn.net/Articles/117972/](https://lwn.net/Articles/117972/).  By contrast, `musl` carries the non-restrictive MIT Licence, and it makes completely static links.
 
-# A use case
+## Why hack `stdio.h` in the Dockerfile?
+
+When I tried to compile `cvs` (first use case below) I got a duplicate definition of `getline` (because of fortify).  I chose to retain the fortify version and discard the base version:
+
+```bash
+RUN sed -i -e 's/ssize_t getline/\/\/ ssize_t getline/' /usr/include/stdio.h
+```
+
+# Use cases
+
+## CVS executable, independent of `glibc`
 
 I created this image because I needed to compile `cvs` to run on Alpine.  Here is a summary of the steps that I took.
 
@@ -53,10 +63,16 @@ exit
 
 At this point, there is a statically linked cvs binary at `~/src/alpine-cvs/cvs-1.11.23/src/cvs`.
 
-## Why hack `stdio.h` in the Dockerfile?
+## Statically linked `busybox`
 
-When I tried to compile `cvs` I got a duplicate definition of `getline` (because of fortify).  I chose to retain the fortify version and discard the base version:
+Within the `alpine-cbuilder` container:
 
 ```bash
-RUN sed -i -e 's/ssize_t getline/\/\/ ssize_t getline/' /usr/include/stdio.h
+wget https://busybox.net/downloads/busybox-1.30.1.tar.bz2
+bzip2 -d busybox-1.30.1.tar.bz2
+tar xf busybox-1.30.1.tar
+cd busybox-1.30.1.tar
+make defconfig
+export LDFLAGS="--static"
+make
 ```
