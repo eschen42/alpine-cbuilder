@@ -1,5 +1,5 @@
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.2656635.svg)](https://doi.org/10.5281/zenodo.2656635)
 [![Docker Repository on Quay](https://quay.io/repository/eschen42/alpine-cbuilder/status "Docker Repository on Quay")](https://quay.io/repository/eschen42/alpine-cbuilder)
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.2656635.svg)](https://doi.org/10.5281/zenodo.2656635)
 
 # A build environment for musl to target Alpine Linux
 
@@ -16,17 +16,45 @@ I created this build environment in Docker to support the non-cross-compiling al
 
 This Docker image implements the advice at [https://wiki.alpinelinux.org/wiki/How\_to\_get\_regular\_stuff\_working](https://wiki.alpinelinux.org/wiki/How_to_get_regular_stuff_working)
 
+# Table of Contents <a name="toc" />
+
+- [Build considerations](#build-considerations)
+- [Additional features](#additional-features)
+  - [`man` page authoring tool](#man-page-authoring-tool)
+- [Pulling images](#pulling-images)
+- [Use cases](#use-cases)
+  - [CVS executable, independent of `glibc`](#cvs-executable-independent-of-glibc)
+  - [Statically linked `busybox`](#statically-linked-busybox)
+
+# Build considerations
+
 ## Why use `musl` rather than `glibc`
 
 Evidently, statically linking libaries against `glibc` does not result in complete static linking: see [https://github.com/rust-lang/cargo/issues/2968#issuecomment-238196762](https://github.com/rust-lang/cargo/issues/2968#issuecomment-238196762) and it runs up against licensing issues [https://lwn.net/Articles/117972/](https://lwn.net/Articles/117972/).  By contrast, `musl` carries the non-restrictive MIT Licence, and it makes completely static links.
 
 ## Why hack `stdio.h` in the Dockerfile?
 
-When I tried to compile `cvs` (first use case below) I got a duplicate definition of `getline` (because of fortify).  I chose to retain the fortify version and discard the base version:
+When I tried to compile `cvs` (first use case below) I got a duplicate definition of `getline` (because of fortify).  I chose to retain the fortify version by commenting-out the base version:
 
 ```bash
 RUN sed -i -e 's/ssize_t getline/\/\/ ssize_t getline/' /usr/include/stdio.h
 ```
+
+# Additional features
+
+## `man` page authoring tool
+
+Release `v0.3.0` of the image includes support for [md2roff](https://github.com/nereusx/md2roff) software to aide creation of man pages from markdown, e.g.:
+```bash
+md2roff myprog.md > myprog.1
+```
+
+# Pulling images
+
+`docker pull quay.io/eschen42/alpine-cbuilder:v0.3.0`
+- For other tags, see [https://quay.io/repository/eschen42/alpine-cbuilder?tag=latest&tab=tags](https://quay.io/repository/eschen42/alpine-cbuilder?tag=latest&tab=tags).
+  - This list also shows the result of security scans for each image.
+  - Intentionally, there is no `latest` tag.
 
 # Use cases
 
