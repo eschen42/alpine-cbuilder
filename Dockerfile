@@ -1,4 +1,4 @@
-FROM alpine:3.10.1
+FROM alpine:3.12
 LABEL maintainer="'Art Eschenlauer, esch0041@umn.edu'"
 LABEL reference="'https://wiki.alpinelinux.org/wiki/How_to_get_regular_stuff_working'" motivation="'Create an environment to compile C programs targeting musl- or statically-linked binaries.'"
 RUN apk add bash vim
@@ -12,8 +12,10 @@ RUN apk add ccache ccache-doc
 RUN sed -i -e 's/ssize_t getline/\/\/ ssize_t getline/' /usr/include/stdio.h
 # Linux headers are necessary to compile and link static busybox
 RUN apk add linux-headers
-# Needed to view man pages
-RUN apk add man
+# Package mandoc is needed to view man pages
+#   Package name has changed from man to mandoc in alpine 3.12
+#     according to https://stackoverflow.com/a/62240153
+RUN apk add mandoc
 # Files needed to build man pages
 RUN apk add perl
 RUN apk add groff
