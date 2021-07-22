@@ -1,4 +1,4 @@
-FROM alpine:3.12
+FROM alpine:3.14
 LABEL maintainer="'Art Eschenlauer, esch0041@umn.edu'"
 LABEL reference="'https://wiki.alpinelinux.org/wiki/How_to_get_regular_stuff_working'" motivation="'Create an environment to compile C programs targeting musl- or statically-linked binaries.'"
 RUN apk add bash vim
