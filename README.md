@@ -1,12 +1,24 @@
 [![Docker Repository on Quay](https://quay.io/repository/eschen42/alpine-cbuilder/status "Docker Repository on Quay")](https://quay.io/repository/eschen42/alpine-cbuilder)
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.2656635.svg)](https://doi.org/10.5281/zenodo.2656635)
 
-# A build environment for musl to target Alpine Linux
-
-## Binaries linked against `glibc` do not run on Alpine
+# Motivation: Binaries linked against `glibc` do not run on Alpine
 
 For the `libc` C library, Alpine Linux uses `musl` [https://www.musl-libc.org/](https://www.musl-libc.org/) rather than `uclibc` or `glibc` when loading its non-statically linked binaries.
 So, the solution to building executables to run on Alpine is either to statically link them or to link them against `musl`.
+
+# Table of Contents <a name="toc" />
+- [Build environments for musl to target Alpine Linux](#build-environments-for-musl-to-target-alpine-linux)
+  - [A Docker image for producing binaries to run on Alpine](#a-docker-image-for-producing-binaries-to-run-on-alpine)
+  - [An Alpine chroot image for rootlessly producing binaries to run on Alpine](#an-alpine-chroot-image-for-rootlessly-producing-binaries-to-run-on-alpine)
+- [Build considerations](#build-considerations)
+- [Additional features](#additional-features)
+  - [`man` page authoring tool](#man-page-authoring-tool)
+- [Pulling images](#pulling-images)
+- [Use cases](#use-cases)
+  - [CVS executable, independent of `glibc`](#cvs-executable-independent-of-glibc)
+  - [Statically linked `busybox`](#statically-linked-busybox)
+
+# Build environments for musl to target Alpine Linux
 
 ## A Docker image for producing binaries to run on Alpine
 
@@ -16,15 +28,43 @@ I created this build environment in Docker to support the non-cross-compiling al
 
 This Docker image implements the advice at [https://wiki.alpinelinux.org/wiki/How\_to\_get\_regular\_stuff\_working](https://wiki.alpinelinux.org/wiki/How_to_get_regular_stuff_working)
 
-# Table of Contents <a name="toc" />
+In summary, build the image like so:
 
-- [Build considerations](#build-considerations)
-- [Additional features](#additional-features)
-  - [`man` page authoring tool](#man-page-authoring-tool)
-- [Pulling images](#pulling-images)
-- [Use cases](#use-cases)
-  - [CVS executable, independent of `glibc`](#cvs-executable-independent-of-glibc)
-  - [Statically linked `busybox`](#statically-linked-busybox)
+```bash
+docker build -t alpine-cbuilder .
+```
+
+## An Alpine chroot image for rootlessly producing binaries to run on Alpine
+
+An alternative approach to using Docker or ["Docker rootless"](https://rootlesscontaine.rs/getting-started/docker/) is to make a chroot image; this can be done (on Ubuntu) without superuser privileges.
+
+First, build rootlesskit as described at [https://github.com/rootless-containers/rootlesskit#setup](https://github.com/rootless-containers/rootlesskit#setup) except there is no need to `make install` unless you want to.  You merely may copy `rootlesskit` (and `rootlessctl` if desired) onto your path.
+
+Now you can build the chroot image (without `sudo`) using the cbuilder-chroot.sh script.  For options, review the script or invoke:
+
+```bash
+bash cbuilder-chroot.sh -h
+```
+
+By default, this script will create a chroot environment in `~/var/alpine`, creating it if it does not exist.
+
+Build and finish initialization of the environment using the commands:
+
+```bash
+CHROOT_DIR=~/var/alpine
+rootlesskit bash cbuilder-chroot.sh -d ${CHROOT_DIR}
+pushd ${CHROOT_DIR}
+rootlesskit ./enter-chroot sh /root/post_install.sh
+popd
+```
+
+Thereafter, to enter the chroot, simply use the command:
+
+```bash
+CHROOT_DIR=~/var/alpine
+cd ${CHROOT_DIR}
+rootlesskit ./enter-chroot
+```
 
 # Build considerations
 
@@ -63,24 +103,29 @@ md2roff myprog.md > myprog.1
 I created this image because I needed to compile `cvs` to run on Alpine.  Here is a summary of the steps that I took.
 
 ```bash
-# build the build-image
-mkdir ~/src/alpine-cbuilder
-cd ~/src/alpine-cbuilder
-gvim Dockerfile
-docker build -t alpine-cbuilder .
-# get the source code for cvs
 mkdir ~/src/alpine-cvs
 cd ~/src/alpine-cvs
-wget https://ftp.gnu.org/non-gnu/cvs/source/stable/1.11.23/cvs-1.11.23.tar.gz
-tar xvzf cvs-1.11.23.tar.gz
-# enter the build system
+
+# enter the build system (by docker)
 docker run --rm -ti -v `pwd`/cvs-1.11.23:/src alpine-cbuilder bash
+
+# or enter by rootless chroot
+CHROOT_DIR=~/var/alpine
+cd ${CHROOT_DIR}
+rootlesskit ./enter-chroot
+# use bash if desired
+bash
+# change directory from /root to /
+cd /
 ```
 
-Within the `alpine-cbuilder` container:
+Within the `alpine-cbuilder` container or chroot:
 
 ```bash
 cd src
+# get the source code for cvs
+wget https://ftp.gnu.org/non-gnu/cvs/source/stable/1.11.23/cvs-1.11.23.tar.gz
+tar xvzf cvs-1.11.23.tar.gz
 # link statically - without this it would link to musl, resulting in a binary 25% smaller
 export LDFLAGS='--static'
 make distclean
@@ -98,8 +143,8 @@ Within the `alpine-cbuilder` container:
 ```bash
 wget https://busybox.net/downloads/busybox-1.30.1.tar.bz2
 bzip2 -d busybox-1.30.1.tar.bz2
-tar xf busybox-1.30.1.tar
-cd busybox-1.30.1.tar
+tar --no-acls --no-selinux --no-xattrs --no-same-owner --no-same-permissions -xf busybox-1.30.1.tar
+cd busybox-1.30.1
 make defconfig
 export LDFLAGS="--static"
 make
