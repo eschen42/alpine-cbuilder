@@ -24,24 +24,26 @@ usage() {
   echo ''
   echo '------------------------------------------------------------------'
   echo ''
-  if [ -e alpine-chroot-install ]; then
-    sh alpine-chroot-install -h
+  if [ -e ${SCRIPT_DIR}/alpine-chroot-install ]; then
+    sh ${SCRIPT_DIR}/alpine-chroot-install -h
   fi
 }
 
 show_versions() {
   echo "cbuilder-chroot.sh ${VERSION:=${ALPINE_CHROOT_INSTALL_TAG}}"
-  if [ -e alpine-chroot-install ]; then
-    sh alpine-chroot-install -v
+  if [ -e ${SCRIPT_DIR}/alpine-chroot-install ]; then
+    sh ${SCRIPT_DIR}/alpine-chroot-install -v
   fi
 }
 
 get_installer() {
-  if [ ! -e alpine-chroot-install ]; then
+  if [ ! -e ${SCRIPT_DIR}/alpine-chroot-install ]; then
     pushd ${SCRIPT_DIR}
-    wget https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/${ALPINE_CHROOT_INSTALL_TAG:="v0.14.0"}/alpine-chroot-install \
-     && echo "${ALPINE_CHROOT_INSTALL_SHA1:='ccbf65f85cdc351851f8ad025bb3e65bae4d5b06'}  alpine-chroot-install" | sha1sum -c \
+    set -x
+    wget -O ${SCRIPT_DIR}/alpine-chroot-install https://raw.githubusercontent.com/alpinelinux/alpine-chroot-install/${ALPINE_CHROOT_INSTALL_TAG:="v0.14.0"}/alpine-chroot-install \
+     && echo "${ALPINE_CHROOT_INSTALL_SHA1:='ccbf65f85cdc351851f8ad025bb3e65bae4d5b06'}  ${SCRIPT_DIR}/alpine-chroot-install" | sha1sum -c \
      || exit 1 
+    set +x
     popd
   fi
 }
@@ -96,9 +98,6 @@ while getopts 'a:b:d:gi:k:m:p:r:t:s:u:hv' OPTION; do
 	esac
 done
 
-# http://logan.tw/posts/2016/02/27/colon-built-in-in-bash/
-#   ':' means treat unset parameters as unset.
-set -x
 export ALPINE_BRANCH="${ALPINE_BRANCH:=latest-stable}"
 #export ALPINE_MIRROR="${ALPINE_MIRROR:='http://dl-cdn.alpinelinux.org/alpine'}"
 export ALPINE_PACKAGES="${ALPINE_PACKAGES:=build-base ca-certificates ssl_client}"
@@ -108,7 +107,6 @@ export CHROOT_DIR="${CHROOT_DIR:=~/alpine}"
 export CHROOT_KEEP_VARS="${CHROOT_KEEP_VARS:=ARCH CI QEMU_EMULATOR TRAVIS_.*}"
 export EXTRA_REPOS="${EXTRA_REPOS:=}"
 export TEMP_DIR="$(mktemp -d || echo /tmp/alpine)"
-set +x
 
 # get installer if it does not exist
 get_installer
@@ -118,9 +116,19 @@ chmod +x ${SCRIPT_DIR}/usr/sbin/mount
 export PATH="${SCRIPT_DIR}/usr/sbin:$PATH"
 
 # invoke installer, options have been exported in environment
-#bash -c printenv
-bash ${SCRIPT_DIR}/alpine-chroot-install
-cp post_install.sh ${CHROOT_DIR}/root/
+mkdir -p ${CHROOT_DIR}
+# invoke from destination directory to limit bogus directories
+pushd ${CHROOT_DIR}
+sh ${SCRIPT_DIR}/alpine-chroot-install
+# remove bogus directories
+rm -rf home/*
+# create missing link
+sh ./enter-chroot sh -c 'if [ ! -e /bin/env ]; then ln -s /bin/busybox /bin/env; fi'
+# run post-installation tasks
+cp ${SCRIPT_DIR}/post_install.sh root/
+sh ./enter-chroot sh /root/post_install.sh
+# return to original directory
+popd
 
 #---help---
 # Usage: alpine-cbuilder.sh [-g] \

@@ -36,17 +36,28 @@ docker build -t alpine-cbuilder .
 
 ## An Alpine chroot image for rootlessly producing binaries to run on Alpine
 
-An alternative approach to using Docker or ["Docker rootless"](https://rootlesscontaine.rs/getting-started/docker/) is to make a chroot image; this can be done (on Ubuntu) without superuser privileges.
+An alternative approach to using Docker or ["Docker rootless"](https://rootlesscontaine.rs/getting-started/docker/) is to make a chroot image; this can be done (on Ubuntu) without superuser privileges using the `cbuilder-chroot.sh` script that leverages `alpine-chroot-install` from [https://github.com/alpinelinux/alpine-chroot-install](https://github.com/alpinelinux/alpine-chroot-install).  Via QEMU, architectures other than `amd64` (e.g., `aarch64` for Raspberry Pi) may be used to build and run the Alpine chroot.
 
 First, build rootlesskit as described at [https://github.com/rootless-containers/rootlesskit#setup](https://github.com/rootless-containers/rootlesskit#setup) except there is no need to `make install` unless you want to.  You merely may copy `rootlesskit` (and `rootlessctl` if desired) onto your path.
 
-Now you can build the chroot image (without `sudo`) using the cbuilder-chroot.sh script.  For options, review the script or invoke:
+Now you can build the chroot image (without `sudo`) using the cbuilder-chroot.sh script.  For options, which may be set by command line switches or environment variables, review the scripts or invoke:
 
 ```bash
 bash cbuilder-chroot.sh -h
 ```
 
-By default, this script will create a chroot environment in `~/var/alpine`, creating it if it does not exist.
+Noteworthy options include:
+
+- `-a ARCH`
+  - Architecture (eumulated by `qemu-user` if necessary.  Choose among:
+    `x86_64,` `x86,` `aarch64,` `armhf`, `armv7`, `ppc64le`, `riscv64`, `s390x`
+- `-d CHROOT_DIR`
+  - Absolute path to the directory where Alpine chroot should be installed.
+- `-p ALPINE_PACKAGES`
+  - Alpine packages to install into the chroot; names separated by spaces and enclosed in quotes.
+  - default: See `CBUILDER` in `cbuilder-chroot.sh`
+
+By default, this script will create a chroot environment in `~/var/alpine`, creating it if it does not exist.  Indeed, there are many options that may be
 
 Build and finish initialization of the environment using the commands:
 
@@ -122,7 +133,7 @@ cd /
 Within the `alpine-cbuilder` container or chroot:
 
 ```bash
-cd src
+cd /src
 # get the source code for cvs
 wget https://ftp.gnu.org/non-gnu/cvs/source/stable/1.11.23/cvs-1.11.23.tar.gz
 tar --no-acls --no-selinux --no-xattrs --no-same-owner --no-same-permissions -xzf cvs-1.11.23.tar.gz
@@ -133,7 +144,6 @@ export LDFLAGS='--static'
 # make distclean
 ./configure
 make
-exit
 ```
 
 At this point, there is a statically linked cvs binary at `~/src/alpine-cvs/cvs-1.11.23/src/cvs`.

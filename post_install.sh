@@ -1,4 +1,4 @@
-!/bin/env sh
+#!/bin/env sh
 set -eu
 # 'getline' in stdio.h collides with 'getline' in the fortify headers
 sed -i -e 's/^[ ]*ssize_t getline/\/\/ ssize_t getline/' /usr/include/stdio.h
