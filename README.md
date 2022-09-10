@@ -125,10 +125,12 @@ Within the `alpine-cbuilder` container or chroot:
 cd src
 # get the source code for cvs
 wget https://ftp.gnu.org/non-gnu/cvs/source/stable/1.11.23/cvs-1.11.23.tar.gz
-tar xvzf cvs-1.11.23.tar.gz
+tar --no-acls --no-selinux --no-xattrs --no-same-owner --no-same-permissions -xzf cvs-1.11.23.tar.gz
+cd cvs-1.11.23
 # link statically - without this it would link to musl, resulting in a binary 25% smaller
 export LDFLAGS='--static'
-make distclean
+# ./configure
+# make distclean
 ./configure
 make
 exit
